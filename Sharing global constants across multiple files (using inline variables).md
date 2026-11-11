@@ -1,23 +1,34 @@
-# Global constants as internal variables
+# Sharing Global Constants Across Multiple Files
 
-```
+There are three common ways to share global constants across multiple files in C++: internal-linkage constants, external-linkage constants, and (since C++17) inline variables.
+
+## Global Constants as Internal Variables
+
+Define the constants in a header file. Namespace-scope `constexpr` variables have internal linkage by default, so each translation unit that includes the header gets its own copy.
+
+**`constants.h`**
+
+```cpp
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-// Define your own namespace to hold constants
+// Define your own namespace to hold constants.
 namespace constants
 {
-    // Global constants have internal linkage by default
+    // Global constants have internal linkage by default.
     constexpr double pi{3.14159};
     constexpr double avogadro{6.0221413e23};
-    constexpr double myGravity{9.2}; // m/s^2 -- gravity is light on this planet
+    constexpr double myGravity{9.2}; // m/s^2 — gravity is light on this planet
     // ... other related constants
 }
+
 #endif
 ```
 
-```
-#include "constants.h" // include a copy of each constant in this file
+**`main.cpp`**
+
+```cpp
+#include "constants.h" // Includes a copy of each constant in this file.
 
 #include <iostream>
 
@@ -33,40 +44,44 @@ int main()
 }
 ```
 
-Advantages:
+### Advantages
 
-Works prior to C++17.
-Can be used in constant expressions in any translation unit that includes them.
+- Works before C++17.
+- Constants can be used in constant expressions in any translation unit that includes the header.
 
-Downsides:
+### Disadvantages
 
-Changing anything in the header file requires recompiling files including the header.
-Each translation unit including the header gets its own copy of the variable.
+- Changing the header requires recompiling every file that includes it.
+- Each translation unit that includes the header gets its own copy of each variable.
 
+## Global Constants as External Variables
 
+Declare the constants in a header and define them in one source file. The definitions use `extern constexpr` to give the variables external linkage. The declarations use `extern const`, because a variable cannot be forward-declared as `constexpr`.
 
-# Global constants as external variables
+**`constants.cpp`**
 
-```
+```cpp
 #include "constants.h"
 
 namespace constants
 {
-    // We use extern to ensure these have external linkage
-    extern constexpr double pi { 3.14159 };
-    extern constexpr double avogadro { 6.0221413e23 };
-    extern constexpr double myGravity { 9.2 }; // m/s^2 -- gravity is light on this planet
+    // Use extern to ensure these variables have external linkage.
+    extern constexpr double pi{3.14159};
+    extern constexpr double avogadro{6.0221413e23};
+    extern constexpr double myGravity{9.2}; // m/s^2 — gravity is light on this planet
 }
 ```
 
-```
+**`constants.h`**
+
+```cpp
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
 namespace constants
 {
-    // Since the actual variables are inside a namespace, the forward declarations need to be inside a namespace as well
-    // We can't forward declare variables as constexpr, but we can forward declare them as (runtime) const
+    // Keep these declarations in the same namespace as the definitions.
+    // They are declared as const because they cannot be forward-declared as constexpr.
     extern const double pi;
     extern const double avogadro;
     extern const double myGravity;
@@ -75,8 +90,10 @@ namespace constants
 #endif
 ```
 
-```
-#include "constants.h" // include all the forward declarations
+**`main.cpp`**
+
+```cpp
+#include "constants.h" // Includes the declarations.
 
 #include <iostream>
 
@@ -92,35 +109,42 @@ int main()
 }
 ```
 
-Advantages:
+### Advantages
 
-Works prior to C++17.
-Only one copy of each variable is required.
-Only requires recompilation of one file if the value of a constant changes.
+- Works before C++17.
+- Only one copy of each variable is required.
+- If a constant's value changes, only the file containing its definition needs to be recompiled.
 
-Disadvantages:
+### Disadvantages
 
-Forward declarations and variable definitions are in separate files, and must be kept in sync.
-Variables not usable in constant expressions outside of the file in which they are defined.
+- The declarations and definitions are in separate files and must be kept in sync.
+- Outside the file where they are defined, the variables cannot be used in constant expressions.
 
-# Global constants as inline variables C++17
+## Global Constants as Inline Variables (C++17 and Later)
 
-```
+C++17 inline variables let you define constants in a header while sharing a single variable across translation units.
+
+**`constants.h`**
+
+```cpp
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-// define your own namespace to hold constants
+// Define your own namespace to hold constants.
 namespace constants
 {
-    inline constexpr double pi { 3.14159 }; // note: now inline constexpr
-    inline constexpr double avogadro { 6.0221413e23 };
-    inline constexpr double myGravity { 9.2 }; // m/s^2 -- gravity is light on this planet
+    inline constexpr double pi{3.14159};
+    inline constexpr double avogadro{6.0221413e23};
+    inline constexpr double myGravity{9.2}; // m/s^2 — gravity is light on this planet
     // ... other related constants
 }
+
 #endif
 ```
 
-```
+**`main.cpp`**
+
+```cpp
 #include "constants.h"
 
 #include <iostream>
@@ -137,11 +161,12 @@ int main()
 }
 ```
 
-Advantages:
+### Advantages
 
-Can be used in constant expressions in any translation unit that includes them.
-Only one copy of each variable is required.
-Downsides:
+- Constants can be used in constant expressions in any translation unit that includes the header.
+- Only one copy of each variable is required.
 
-Only works in C++17 onward.
-Changing anything in the header file requires recompiling files including the header.
+### Disadvantages
+
+- Requires C++17 or later.
+- Changing the header requires recompiling every file that includes it.
